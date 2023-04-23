@@ -5,7 +5,7 @@ import pywss
 def main():
     app = pywss.App()
     app.use(
-        pywss.NewCORSHandler(),
+        pywss.NewCORSHandler(allow_methods=("*",), allow_headers=("*",)),
         pywss.NewJWTHandler(
             ignore_route=("/",),
             ignore_startswith=("/docs",),
@@ -16,6 +16,7 @@ def main():
         )
     )
     app.get("/", lambda ctx: ctx.redirect("/docs"))
+    app.options("*", lambda ctx: ctx.set_status_code(pywss.StatusNoContent))
     app.register_modules("api")
     app.openapi()
     app.run()
