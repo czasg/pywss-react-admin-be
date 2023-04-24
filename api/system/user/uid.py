@@ -7,11 +7,11 @@ from pydantic import BaseModel
 
 from db import Session
 from db.model import User
-from utils.http import Response
+from utils.http import Response, UnknownErrResponse
 from service import role as roleService
 from service import user as userService
 
-__route__ = "/user/{uid}"
+__route__ = "/{uid}"
 
 
 def auth_verify(ctx: pywss.Context):
@@ -82,6 +82,7 @@ class UserService:
         if req.username:
             stmt.values(username=req.username)
         with Session() as session:
+            print(stmt)
             session.execute(stmt)
             session.commit()
 
@@ -94,12 +95,20 @@ class View(UserService):
         resp = Response()
         uid: int = int(ctx.route_params["uid"])
         user = userService.get_user_by_id(uid)
-        roles = roleService.get_user_roles(uid)
         resp.data = {
             "id": user.id,
             "alias": user.alias,
             "username": user.username,
-            "roles": [role.name for role in roles] or ["guest"]
+            "roles": [
+                {
+                    'name': role.name,
+                    'alias': role.alias,
+                }
+                for role in roleService.get_user_roles(user.id)
+            ],
+            "created_by": user.created_by,
+            "created_at": user.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            "updated_at": user.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
         ctx.write(resp)
 
@@ -117,7 +126,7 @@ class View(UserService):
         try:
             user = userService.get_user_by_id(uid)
             self.update_user(req, user)
-        except Exception as e:
-            resp.code = 99999
-            resp.message = f"{e}"
+        except:
+            resp = UnknownErrResponse
+            ctx.log.traceback()
         ctx.write(resp)

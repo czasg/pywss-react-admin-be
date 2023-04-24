@@ -35,3 +35,7 @@ class Response(dict):
     @data.setter
     def data(self, value):
         self["data"] = value
+
+
+ParamsErrResponse = Response(99999, "请求参数异常")
+UnknownErrResponse = Response(99999, "服务发生未知异常")

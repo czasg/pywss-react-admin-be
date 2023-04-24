@@ -5,15 +5,14 @@ import hashlib
 
 from pydantic import BaseModel
 from sqlalchemy import func
-from datetime import datetime
 
 from db import Session
 from db.model import User
-from utils.http import Response
-from service.role import get_user_roles
+from service import role as roleService
+from utils.http import Response, ParamsErrResponse, UnknownErrResponse
+from utils.exception import StrException
 
 username_regex = re.compile("^[a-zA-Z]+$")
-datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 class HttpGetRequest(BaseModel):
@@ -50,7 +49,7 @@ class UserService:
         with Session() as session:
             query = session.query(func.count(User.id))
             query = request.bind_query(query, ignore_page=True)
-            return query.one()
+            return query.one()[0]
 
     def get_users(self, request: HttpGetRequest):
         with Session() as session:
@@ -62,7 +61,7 @@ class UserService:
         with Session() as session:
             existUser = session.query(User).filter(User.username == user.username).first()
             if existUser:
-                raise Exception(f"用户[{user.username}]已存在")
+                raise StrException(f"用户[{user.username}]已存在")
             session.add(user)
             session.commit()
 
@@ -74,14 +73,20 @@ class View(UserService):
         resp = Response()
         req = HttpGetRequest(**ctx.url_params)
         resp.data = {
-            "total": self.get_users_count(req)[0],
+            "total": self.get_users_count(req),
             "data": [
                 {
                     "id": user.id,
                     "alias": user.alias,
                     "username": user.username,
                     "enable": user.enable,
-                    "roles": [{'name': role.name, 'alias': role.alias} for role in get_user_roles(user.id)],
+                    "roles": [
+                        {
+                            'name': role.name,
+                            'alias': role.alias,
+                        }
+                        for role in roleService.get_user_roles(user.id)
+                    ],
                     "created_by": user.created_by,
                     "created_at": user.created_at.strftime("%Y-%m-%d %H:%M:%S"),
                     "updated_at": user.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
@@ -101,9 +106,7 @@ class View(UserService):
         try:
             req = HttpPostRequest(**ctx.json())
         except:
-            resp.code = 99999
-            resp.message = "请求参数异常"
-            ctx.write(resp)
+            ctx.write(ParamsErrResponse)
             return
         if not username_regex.match(req.username):
             resp.code = 99999
@@ -121,7 +124,10 @@ class View(UserService):
         )
         try:
             self.add_user(user)
-        except Exception as e:
+        except StrException as e:
             resp.code = 99999
             resp.message = f"{e}"
+        except:
+            resp = UnknownErrResponse
+            ctx.log.traceback()
         ctx.write(resp)
