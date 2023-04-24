@@ -9,10 +9,9 @@ from sqlalchemy import func
 from db import Session
 from db.model import User, UserRole, UserRoleMid
 from service import role as roleService
-from utils.http import Response, ParamsErrResponse, UnknownErrResponse
 from utils.exception import StrException
-
-username_regex = re.compile("^[a-zA-Z]+$")
+from utils.http import Response, ParamsErrResponse, UnknownErrResponse
+from utils import verify
 
 
 class HttpGetRequest(BaseModel):
@@ -116,21 +115,19 @@ class View(UserService):
         resp = Response()
         try:
             req = HttpPostRequest(**ctx.json())
+            verify.letter_name(req.username)
         except:
             ctx.write(ParamsErrResponse)
             return
-        if not username_regex.match(req.username):
-            resp.code = 99999
-            resp.message = "无效用户名，仅支持大小写字母"
-            ctx.write(resp)
+        if req.username == "system":
+            ctx.write(ParamsErrResponse)
             return
         sha256 = hashlib.sha256()
         sha256.update(req.password.encode())
-        pwd256Digest = sha256.hexdigest()
         user = User(
             alias=req.alias,
             username=req.username,
-            password=pwd256Digest,
+            password=sha256.hexdigest(),
             created_by=req.created_by or req.username,
         )
         try:

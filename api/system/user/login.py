@@ -5,8 +5,10 @@ import hashlib
 from pydantic import BaseModel
 
 from db import Session
-from db.model import User, UserRole, UserRoleMid
-from utils.http import Response
+from db.model import User
+from service import role as roleService
+from utils.http import Response, ParamsErrResponse, UnknownErrResponse
+from utils.exception import StrException
 
 
 class HttpPostRequest(BaseModel):
@@ -24,11 +26,11 @@ class LoginService:
         with Session() as session:
             user = session.query(User).filter(User.username == req.username).first()
             if not user:
-                raise Exception("用户/密码错误")
+                raise StrException("用户/密码错误")
             if user.password != pwd256Digest:
-                raise Exception("用户/密码错误")
+                raise StrException("用户/密码错误")
             if not user.enable:
-                raise Exception("用户禁止登录")
+                raise StrException("用户禁止登录")
             return user
 
 
@@ -44,9 +46,7 @@ class View(LoginService):
         try:
             req = HttpPostRequest(**ctx.json())
         except:
-            resp.code = 99999
-            resp.message = "未指定有效的请求参数"
-            ctx.write(resp)
+            ctx.write(ParamsErrResponse)
             return
         if req.loginType != "default":
             resp.code = 99999
@@ -55,25 +55,18 @@ class View(LoginService):
             return
         try:
             user = self.check_user(req)
-        except Exception as e:
-            resp.code = 99999
-            resp.message = f"{e}"
-            ctx.write(resp)
-            return
-
-        with Session() as session:
-            roles = []
-            for name, in session.query(UserRole.name). \
-                    join(UserRoleMid, UserRoleMid.rid == UserRole.id). \
-                    filter(UserRoleMid.uid == user.id). \
-                    all():
-                roles.append(name)
             jwt: pywss.JWT = ctx.data.jwt
             resp.data = {
                 "token": jwt.encrypt(
                     uid=user.id,
                     username=req.username,
-                    roles=roles or ["guest"],
+                    roles=[role.name for role in roleService.get_user_roles(user.id)],
                 )
             }
-            ctx.write(resp)
+        except StrException as e:
+            resp.code = 99999
+            resp.message = f"{e}"
+        except:
+            resp = UnknownErrResponse
+            ctx.log.traceback()
+        ctx.write(resp)
