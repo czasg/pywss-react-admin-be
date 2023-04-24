@@ -7,7 +7,8 @@ from pydantic import BaseModel
 
 from db import Session
 from db.model import User
-from utils.http import Response, UnknownErrResponse
+from utils.http import Response, ParamsErrResponse, UnknownErrResponse
+from utils.exception import StrException
 from service import role as roleService
 from service import user as userService
 
@@ -62,25 +63,23 @@ class HttpPostRequest(BaseModel):
 class UserService:
 
     def update_user(self, req: HttpPostRequest, user: User):
+        if user.created_by == "system":
+            raise StrException("系统用户无法更新")
         stmt = update(User).where(User.id == user.id)
         if req.type == "info":
-            stmt.values(alias=req.alias, username=req.username)
+            stmt = stmt.values(alias=req.alias, username=req.username)
         elif req.type == "pwd":
             sha256 = hashlib.sha256()
             sha256.update(req.password_old.encode())
             if sha256.hexdigest() != user.password:
-                raise Exception("旧密码验证错误")
+                raise StrException("旧密码验证错误")
             sha256 = hashlib.sha256()
             sha256.update(req.password_new.encode())
-            stmt.values(password=sha256.hexdigest())
+            stmt = stmt.values(password=sha256.hexdigest())
         elif req.type == "enable":
-            stmt.values(enable=req.enable)
+            stmt = stmt.values(enable=req.enable)
         else:
-            raise Exception(f"暂不支持[{req.type}]类型")
-        if req.alias:
-            stmt.values(alias=req.alias)
-        if req.username:
-            stmt.values(username=req.username)
+            raise StrException(f"暂不支持[{req.type}]类型")
         with Session() as session:
             print(stmt)
             session.execute(stmt)
@@ -118,14 +117,15 @@ class View(UserService):
         try:
             req = HttpPostRequest(**ctx.json())
         except:
-            resp.code = 99999
-            resp.message = "请求参数异常"
-            ctx.write(resp)
+            ctx.write(ParamsErrResponse)
             return
         uid: int = int(ctx.route_params["uid"])
         try:
             user = userService.get_user_by_id(uid)
             self.update_user(req, user)
+        except StrException as e:
+            resp.code = 99999
+            resp.message = f"{e}"
         except:
             resp = UnknownErrResponse
             ctx.log.traceback()

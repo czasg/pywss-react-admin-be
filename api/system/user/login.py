@@ -27,6 +27,8 @@ class LoginService:
                 raise Exception("用户/密码错误")
             if user.password != pwd256Digest:
                 raise Exception("用户/密码错误")
+            if not user.enable:
+                raise Exception("用户禁止登录")
             return user
 
 

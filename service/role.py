@@ -10,4 +10,5 @@ def get_user_roles(uid: int) -> List[UserRole]:
         return session.query(UserRole). \
             join(UserRoleMid, UserRoleMid.rid == UserRole.id). \
             filter(UserRoleMid.uid == uid). \
+            order_by(UserRole.id). \
             all()

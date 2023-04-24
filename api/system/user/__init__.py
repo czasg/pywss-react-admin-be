@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy import func
 
 from db import Session
-from db.model import User
+from db.model import User, UserRole, UserRoleMid
 from service import role as roleService
 from utils.http import Response, ParamsErrResponse, UnknownErrResponse
 from utils.exception import StrException
@@ -63,6 +63,10 @@ class UserService:
             if existUser:
                 raise StrException(f"用户[{user.username}]已存在")
             session.add(user)
+            session.flush()
+            role = session.query(UserRole.id).filter(UserRole.name == 'guest').first()
+            if role:
+                session.add(UserRoleMid(uid=user.id, rid=role.id))
             session.commit()
 
 
@@ -72,28 +76,35 @@ class View(UserService):
     def http_get(self, ctx: pywss.Context):
         resp = Response()
         req = HttpGetRequest(**ctx.url_params)
-        resp.data = {
-            "total": self.get_users_count(req),
-            "data": [
-                {
-                    "id": user.id,
-                    "alias": user.alias,
-                    "username": user.username,
-                    "enable": user.enable,
-                    "roles": [
-                        {
-                            'name': role.name,
-                            'alias': role.alias,
-                        }
-                        for role in roleService.get_user_roles(user.id)
-                    ],
-                    "created_by": user.created_by,
-                    "created_at": user.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                    "updated_at": user.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
-                }
-                for user in self.get_users(req)
-            ],
-        }
+        try:
+            resp.data = {
+                "total": self.get_users_count(req),
+                "data": [
+                    {
+                        "id": user.id,
+                        "alias": user.alias,
+                        "username": user.username,
+                        "enable": user.enable,
+                        "roles": [
+                            {
+                                'name': role.name,
+                                'alias': role.alias,
+                            }
+                            for role in roleService.get_user_roles(user.id)
+                        ],
+                        "created_by": user.created_by,
+                        "created_at": user.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                        "updated_at": user.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    }
+                    for user in self.get_users(req)
+                ],
+            }
+        except StrException as e:
+            resp.code = 99999
+            resp.message = f"{e}"
+        except:
+            resp = UnknownErrResponse
+            ctx.log.traceback()
         ctx.write(resp)
 
     @pywss.openapi.docs(summary="新增用户", request={
