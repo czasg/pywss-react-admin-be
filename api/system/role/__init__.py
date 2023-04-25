@@ -7,8 +7,9 @@ from typing import List
 
 from db import Session
 from db.model import UserRole
-from utils.http import Response, ParamsErrResponse, UnknownErrResponse
+from utils.http import Response, ParamsErrResponse
 from utils.exception import StrException
+from utils import verify
 
 name_regex = re.compile("^[a-zA-Z]+$")
 
@@ -28,7 +29,7 @@ class HttpGetRequest(BaseModel):
             if enable:
                 query = query.filter(query_filter)
         if not ignore_page:
-            query = query.limit(self.pageSize).offset(self.pageNum)
+            query = query.limit(self.pageSize).offset(self.pageNum * self.pageSize)
         return query
 
 
@@ -48,7 +49,7 @@ class RoleService:
 
     def add_role(self, role: UserRole):
         with Session() as session:
-            existRole = session.query(UserRole).filter(UserRole.name == role.name).scalar()
+            existRole = session.query(UserRole.id).filter(UserRole.name == role.name).scalar()
             if existRole:
                 raise StrException(f"角色[{role.name}]已存在")
             session.add(role)
@@ -59,52 +60,33 @@ class View(RoleService):
 
     @pywss.openapi.docs(summary="获取角色列表")
     def http_get(self, ctx: pywss.Context):
-        resp = Response()
         req = HttpGetRequest(**ctx.url_params)
-        try:
-            resp.data = [
-                {
-                    "id": role.id,
-                    "name": role.name,
-                    "alias": role.alias,
-                    "created_by": role.created_by,
-                    "created_at": role.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                    "updated_at": role.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
-                }
-                for role in self.get_roles(req)
-            ]
-        except StrException as e:
-            resp.code = 99999
-            resp.message = f"{e}"
-        except:
-            resp = UnknownErrResponse
-            ctx.log.traceback()
+        resp = Response()
+        resp.data = [
+            {
+                "id": role.id,
+                "name": role.name,
+                "alias": role.alias,
+                "created_by": role.created_by,
+                "created_at": role.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                "updated_at": role.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            for role in self.get_roles(req)
+        ]
         ctx.write(resp)
 
     @pywss.openapi.docs(summary="创建角色")
     def http_post(self, ctx: pywss.Context):
-        resp = Response()
         try:
             req = HttpPostRequest(**ctx.json())
+            verify.letter_name(req.name)
         except:
             ctx.write(ParamsErrResponse)
-            return
-        if not name_regex.match(req.name):
-            resp.code = 99999
-            resp.message = "无效角色名，仅支持大小写字母"
-            ctx.write(resp)
             return
         role = UserRole(
             name=req.name,
             alias=req.alias,
             created_by=req.created_by,
         )
-        try:
-            self.add_role(role)
-        except StrException as e:
-            resp.code = 99999
-            resp.message = f"{e}"
-        except:
-            resp = UnknownErrResponse
-            ctx.log.traceback()
-        ctx.write(resp)
+        self.add_role(role)
+        ctx.write(Response())

@@ -1,6 +1,8 @@
 # coding: utf-8
 import pywss
 
+from middleware.recover import recoverHandler
+
 
 def main():
     app = pywss.App()
@@ -17,7 +19,7 @@ def main():
     )
     app.get("/", lambda ctx: ctx.redirect("/docs"))
     app.options("*", lambda ctx: ctx.set_status_code(pywss.StatusNoContent))
-    app.register_modules("api")
+    app.view_modules("api", recoverHandler)
     app.openapi()
     app.run()
 

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from db import Session
 from db.model import User
 from service import role as roleService
-from utils.http import Response, ParamsErrResponse, UnknownErrResponse
+from utils.http import Response, ParamsErrResponse
 from utils.exception import StrException
 
 
@@ -42,31 +42,21 @@ class View(LoginService):
         "password": "password",
     })
     def http_post(self, ctx: pywss.Context):
-        resp = Response()
         try:
             req = HttpPostRequest(**ctx.json())
         except:
             ctx.write(ParamsErrResponse)
             return
         if req.loginType != "default":
-            resp.code = 99999
-            resp.message = f"暂不支持[{req.loginType}]登录方式"
-            ctx.write(resp)
-            return
-        try:
-            user = self.check_user(req)
-            jwt: pywss.JWT = ctx.data.jwt
-            resp.data = {
-                "token": jwt.encrypt(
-                    uid=user.id,
-                    username=req.username,
-                    roles=[role.name for role in roleService.get_user_roles(user.id)],
-                )
-            }
-        except StrException as e:
-            resp.code = 99999
-            resp.message = f"{e}"
-        except:
-            resp = UnknownErrResponse
-            ctx.log.traceback()
+            raise StrException(f"暂不支持[{req.loginType}]登录方式")
+        user = self.check_user(req)
+        jwt: pywss.JWT = ctx.data.jwt
+        resp = Response()
+        resp.data = {
+            "token": jwt.encrypt(
+                uid=user.id,
+                username=req.username,
+                roles=[role.name for role in roleService.get_user_roles(user.id)],
+            )
+        }
         ctx.write(resp)
