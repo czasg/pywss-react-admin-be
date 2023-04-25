@@ -47,7 +47,7 @@ class UserService:
         with Session() as session:
             query = session.query(func.count(User.id))
             query = request.bind_query(query, ignore_page=True)
-            return query.one()[0]
+            return query.scalar()
 
     def get_users(self, request: HttpGetRequest):
         with Session() as session:

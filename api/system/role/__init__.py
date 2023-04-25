@@ -4,6 +4,7 @@ import pywss
 
 from pydantic import BaseModel
 from typing import List
+from sqlalchemy import func
 
 from db import Session
 from db.model import UserRole
@@ -36,10 +37,16 @@ class HttpGetRequest(BaseModel):
 class HttpPostRequest(BaseModel):
     name: str
     alias: str
-    created_by: str
+    created_by: str = None
 
 
 class RoleService:
+
+    def get_roles_count(self, request: HttpGetRequest):
+        with Session() as session:
+            query = session.query(func.count(UserRole.id))
+            query = request.bind_query(query, ignore_page=True)
+            return query.scalar()
 
     def get_roles(self, request: HttpGetRequest) -> List[UserRole]:
         with Session() as session:
@@ -62,17 +69,20 @@ class View(RoleService):
     def http_get(self, ctx: pywss.Context):
         req = HttpGetRequest(**ctx.url_params)
         resp = Response()
-        resp.data = [
-            {
-                "id": role.id,
-                "name": role.name,
-                "alias": role.alias,
-                "created_by": role.created_by,
-                "created_at": role.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                "updated_at": role.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
-            }
-            for role in self.get_roles(req)
-        ]
+        resp.data = {
+            "total": self.get_roles_count(req),
+            "data": [
+                {
+                    "id": role.id,
+                    "name": role.name,
+                    "alias": role.alias,
+                    "permission": role.permission,
+                    "created_by": role.created_by,
+                    "created_at": role.created_at.strftime("%Y-%m-%d %H:%M:%S"),
+                    "updated_at": role.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
+                }
+                for role in self.get_roles(req)]
+        }
         ctx.write(resp)
 
     @pywss.openapi.docs(summary="创建角色")
@@ -86,7 +96,7 @@ class View(RoleService):
         role = UserRole(
             name=req.name,
             alias=req.alias,
-            created_by=req.created_by,
+            created_by=req.created_by or req.name,
         )
         self.add_role(role)
         ctx.write(Response())

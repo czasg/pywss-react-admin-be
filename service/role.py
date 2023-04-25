@@ -1,9 +1,17 @@
 # coding: utf-8
 from typing import List
+from datetime import datetime
 
 from db import Session
 from db.model import UserRole, UserRoleMid
 from utils.exception import StrException
+
+
+def update_role_by_id(rid: int, **kwargs):
+    kwargs["updated_at"] = datetime.now()
+    with Session() as session:
+        session.query(UserRole).where(UserRole.id == rid).update(kwargs)
+        session.commit()
 
 
 def get_user_roles(uid: int) -> List[UserRole]:
