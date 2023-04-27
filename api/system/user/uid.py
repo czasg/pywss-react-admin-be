@@ -36,6 +36,7 @@ class View:
                 {
                     'name': role.name,
                     'alias': role.alias,
+                    'permission': role.permission.split(",") if role.permission else [],
                 }
                 for role in roleService.get_user_roles(user.id)
             ],
