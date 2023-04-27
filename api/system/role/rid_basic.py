@@ -19,12 +19,8 @@ class View:
 
     @pywss.openapi.docs(summary="更新角色信息")
     def http_post(self, ctx: pywss.Context):
-        try:
-            req = HttpPostRequest(**ctx.json())
-            verify.letter_name(req.name)
-        except:
-            ctx.write(ParamsErrResponse)
-            return
+        req = HttpPostRequest(**ctx.json())
+        verify.letter_name(req.name)
         rid: int = int(ctx.route_params["rid"])
         roleService.update_role_by_id(rid, **req.dict())
         ctx.write(Response())

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from db import Session
 from db.model import User
 from service import role as roleService
-from utils.http import Response, ParamsErrResponse
+from utils.http import Response
 from utils.exception import StrException
 
 
@@ -42,11 +42,7 @@ class View(LoginService):
         "password": "password",
     })
     def http_post(self, ctx: pywss.Context):
-        try:
-            req = HttpPostRequest(**ctx.json())
-        except:
-            ctx.write(ParamsErrResponse)
-            return
+        req = HttpPostRequest(**ctx.json())
         if req.loginType != "default":
             raise StrException(f"暂不支持[{req.loginType}]登录方式")
         user = self.check_user(req)

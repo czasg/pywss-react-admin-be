@@ -9,7 +9,7 @@ from db import Session
 from db.model import User, UserRole, UserRoleMid
 from service import role as roleService
 from utils.exception import StrException
-from utils.http import Response, ParamsErrResponse
+from utils.http import Response
 from utils import verify
 
 
@@ -104,12 +104,8 @@ class View(UserService):
         "password": "",
     })
     def http_post(self, ctx: pywss.Context):
-        try:
-            req = HttpPostRequest(**ctx.json())
-            verify.letter_name(req.username)
-        except:
-            ctx.write(ParamsErrResponse)
-            return
+        req = HttpPostRequest(**ctx.json())
+        verify.letter_name(req.username)
         sha256 = hashlib.sha256()
         sha256.update(req.password.encode())
         user = User(

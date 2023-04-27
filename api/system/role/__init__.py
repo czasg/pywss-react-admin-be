@@ -8,7 +8,7 @@ from sqlalchemy import func
 
 from db import Session
 from db.model import UserRole
-from utils.http import Response, ParamsErrResponse
+from utils.http import Response
 from utils.exception import StrException
 from utils import verify
 
@@ -87,12 +87,8 @@ class View(RoleService):
 
     @pywss.openapi.docs(summary="创建角色")
     def http_post(self, ctx: pywss.Context):
-        try:
-            req = HttpPostRequest(**ctx.json())
-            verify.letter_name(req.name)
-        except:
-            ctx.write(ParamsErrResponse)
-            return
+        req = HttpPostRequest(**ctx.json())
+        verify.letter_name(req.name)
         role = UserRole(
             name=req.name,
             alias=req.alias,

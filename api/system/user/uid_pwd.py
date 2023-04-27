@@ -19,11 +19,7 @@ class HttpPostRequest(BaseModel):
 class View:
 
     def http_post(self, ctx: pywss.Context):
-        try:
-            req = HttpPostRequest(**ctx.json())
-        except:
-            ctx.write(ParamsErrResponse)
-            return
+        req = HttpPostRequest(**ctx.json())
         uid: int = int(ctx.route_params["uid"])
         user = userService.get_user_by_id(uid)
         sha256 = hashlib.sha256()
