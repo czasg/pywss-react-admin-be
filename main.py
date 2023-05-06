@@ -17,10 +17,10 @@ def main():
             ]
         )
     )
+    app.openapi()
     app.get("/", lambda ctx: ctx.redirect("/docs"))
     app.options("*", lambda ctx: ctx.set_status_code(pywss.StatusNoContent))
-    app.view_modules("api", recoverHandler)
-    app.openapi()
+    app.view_modules("controller", recoverHandler, prefix=False)
     app.run()
 
 

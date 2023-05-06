@@ -3,6 +3,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 base = declarative_base()
 
+from .async_task import AsyncTask
 from .role import UserRole, UserRoleMid
 from .user import User
 
