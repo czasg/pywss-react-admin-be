@@ -17,8 +17,8 @@ class HttpGetRequest(BaseModel):
 
     def bind_query(self, query, ignore_page=False):
         queries = [
-            (bool(self.name), AsyncTask.username.contains(self.name)),
-            (bool(self.description), AsyncTask.alias.contains(self.description)),
+            (bool(self.name), AsyncTask.name.contains(self.name)),
+            (bool(self.description), AsyncTask.description.contains(self.description)),
         ]
         for enable, query_filter in queries:
             if enable:
