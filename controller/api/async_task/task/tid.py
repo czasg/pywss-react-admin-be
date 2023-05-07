@@ -6,7 +6,7 @@ from db.model import AsyncTask
 from utils.http import Response
 from service import db as dbService
 
-__route__ = "/{uid}"
+__route__ = "/{tid}"
 
 
 class HttpPostRequest(BaseModel):

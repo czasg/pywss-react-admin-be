@@ -30,7 +30,7 @@ class HttpGetRequest(BaseModel):
 
 class HttpPostRequest(BaseModel):
     name: str
-    description: str
+    description: str = ""
     task_all_number: int = 100
     task_success_number: int
 
