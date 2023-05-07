@@ -25,7 +25,7 @@ class View:
         resp = Response()
         resp.data = {
             "id": task.id,
-            "name": task.alias,
+            "name": task.name,
             "description": task.description,
             "task_all_number": task.task_all_number,
             "task_success_number": task.task_success_number,
