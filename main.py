@@ -2,6 +2,7 @@
 import pywss
 
 from middleware.recover import recoverHandler
+from middleware.stat_api import statApiHandler
 
 
 def main():
@@ -15,7 +16,8 @@ def main():
             ignore_method_route=[
                 ("POST", ["/api/system/user"]),
             ]
-        )
+        ),
+        statApiHandler
     )
     app.openapi()
     app.get("/", lambda ctx: ctx.redirect("/docs"))
