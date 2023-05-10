@@ -17,7 +17,7 @@ def main():
                 ("POST", ["/api/system/user"]),
             ]
         ),
-        statApiHandler
+        statApiHandler,
     )
     app.openapi()
     app.get("/", lambda ctx: ctx.redirect("/docs"))

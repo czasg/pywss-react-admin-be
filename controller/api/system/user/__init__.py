@@ -72,8 +72,8 @@ class View(UserService):
 
     @pywss.openapi.docs(summary="用户列表", params=HttpGetRequest().dict())
     def http_get(self, ctx: pywss.Context):
-        resp = Response()
         req = HttpGetRequest(**ctx.url_params)
+        resp = Response()
         resp.data = {
             "total": self.get_users_count(req),
             "data": [
