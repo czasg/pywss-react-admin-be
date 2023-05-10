@@ -10,13 +10,13 @@ from datetime import datetime, timedelta
 
 
 class HttpGetRequest(BaseModel):
-    start: datetime
-    end: datetime
+    start: str
+    end: str
 
     def bind_query(self, query):
         queries = [
-            (bool(self.start), StatApi.created_at > self.start),
-            (bool(self.end), StatApi.created_at < self.end),
+            (bool(self.start), StatApi.created_at > f"{self.start} 00:00:00"),
+            (bool(self.end), StatApi.created_at < f"{self.end} 23:59:59"),
         ]
         for enable, query_filter in queries:
             if enable:
@@ -27,9 +27,11 @@ class HttpGetRequest(BaseModel):
 class Service:
 
     def date_range(self, request: HttpGetRequest):
+        start = datetime.strptime(request.start, "%Y-%m-%d")
+        end = datetime.strptime(request.end, "%Y-%m-%d")
         return [
-            (request.start + timedelta(days=i)).strftime("%Y-%m-%d")
-            for i in range((request.end - request.start).days + 1)
+            (start + timedelta(days=i)).strftime("%Y-%m-%d")
+            for i in range((end - start).days + 1)
         ]
 
     def request_number_stat(self, request: HttpGetRequest):
@@ -60,7 +62,10 @@ class Service:
             )
             query = request.bind_query(query)
             return [
-                {api: num}
+                {
+                    "name": api,
+                    "value": num,
+                }
                 for api, num, in query.all()
             ]
 
@@ -74,7 +79,10 @@ class Service:
             )
             query = request.bind_query(query)
             return [
-                {code: num}
+                {
+                    "name": code,
+                    "value": num,
+                }
                 for code, num, in query.all()
             ]
 
@@ -88,7 +96,10 @@ class Service:
             )
             query = request.bind_query(query)
             return [
-                {user: num}
+                {
+                    "name": user,
+                    "value": num,
+                }
                 for user, num, in query.all()
             ]
 
