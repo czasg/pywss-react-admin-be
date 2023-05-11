@@ -8,8 +8,10 @@ class Exam(base):
     __tablename__ = 'exams'
 
     id = Column(Integer(), autoincrement=True, primary_key=True)
-    name = Column(Text(), unique=True, nullable=False)
+    name = Column(Text(), nullable=False)
     description = Column(Text())
+    exam_type = Column(Text())
+    language_type = Column(Text(), nullable=False)
     created_by = Column(Text(), nullable=False)
     created_at = Column(DateTime(), server_default=func.now())
     updated_at = Column(DateTime(), server_default=func.now())
@@ -33,10 +35,10 @@ class ExamQuestion(base):
     __tablename__ = 'exam_questions'
 
     id = Column(Integer(), autoincrement=True, primary_key=True)
-    exam_id = Column(Integer(), nullable=False)
-    type = Column(Integer(), nullable=False)
     question = Column(Text(), nullable=False)
     answer = Column(Text(), nullable=False)
+    exam_type = Column(Text(), nullable=False)
+    language_type = Column(Text(), nullable=False)
     created_by = Column(Text(), nullable=False)
     created_at = Column(DateTime(), server_default=func.now())
     updated_at = Column(DateTime(), server_default=func.now())

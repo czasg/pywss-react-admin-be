@@ -1,71 +1,59 @@
 # coding: utf-8
 import pywss
 
+from collections import defaultdict
+from typing import List
 from pydantic import BaseModel
-from sqlalchemy import func
+
 from db import Session
 from db.model import Exam
 from utils.http import Response
 from service import db as dbService
 
 
-class HttpGetRequest(BaseModel):
-    pageSize: int = 10
-    pageNum: int = 0
-    name: str = ""
-
-    def bind_query(self, query, ignore_page=False):
-        queries = [
-            (bool(self.name), Exam.name.contains(self.name)),
-        ]
-        for enable, query_filter in queries:
-            if enable:
-                query = query.filter(query_filter)
-        if not ignore_page:
-            query = query.limit(self.pageSize).offset(self.pageNum * self.pageSize)
-        return query
-
-
 class Service:
 
-    def exam_count(self, request: HttpGetRequest):
+    def get_all_exams(self) -> List:
+        exams = defaultdict(list)
         with Session() as session:
-            query = session.query(func.count(Exam.id))
-            query = request.bind_query(query, ignore_page=True)
-            return query.scalar()
-
-    def get_exams(self, request: HttpGetRequest):
-        with Session() as session:
-            query = session.query(Exam)
-            query = request.bind_query(query)
-            return query.all()
-
-
-class HttpPostRequest(BaseModel):
-    name: str
-    description: str
-
-
-class View(Service):
-
-    @pywss.openapi.docs("考试类型列表")
-    def http_get(self, ctx: pywss.Context):
-        req = HttpGetRequest(**ctx.url_params)
-        resp = Response()
-        resp.data = {
-            "total": self.exam_count(req),
-            "data": [
-                {
+            for exam in session.query(Exam).all():
+                exams[exam.exam_type].append({
                     "id": exam.id,
                     "name": exam.name,
                     "description": exam.description,
                     "created_by": exam.created_by,
                     "created_at": exam.created_at.strftime("%Y-%m-%d %H:%M:%S"),
                     "updated_at": exam.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
-                }
-                for exam in self.get_exams(req)
-            ],
-        }
+                })
+        return [
+            {
+                "name": "单选题集",
+                "exam": exams.get("single_choice", [])
+            },
+            {
+                "name": "多选题集",
+                "exam": exams.get("multiple_choice", [])
+            },
+            {
+                "name": "编程题集",
+                "exam": exams.get("program", [])
+            },
+        ]
+
+
+class HttpPostRequest(BaseModel):
+    name: str
+    description: str
+    exam_type: str
+    language_type: str
+
+
+class View(Service):
+
+    @pywss.openapi.docs("考试列表")
+    def http_get(self, ctx: pywss.Context):
+        resp = Response()
+        resp.data = self.get_all_exams()
         ctx.write(resp)
 
     @pywss.openapi.docs("新增考试类型")
@@ -74,6 +62,8 @@ class View(Service):
         exam = Exam(
             name=req.name,
             description=req.description,
+            exam_type=req.exam_type,
+            language_type=req.language_type,
             created_by=ctx.data.jwt_payload["username"],
         )
         dbService.add_model(exam)
