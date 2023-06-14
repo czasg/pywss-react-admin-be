@@ -68,14 +68,17 @@ class UserService:
             session.commit()
 
 
-class View(UserService):
+class View:
+
+    def __init__(self, userService: UserService):
+        self.userService = userService
 
     @pywss.openapi.docs(summary="用户列表", params=HttpGetRequest().dict())
     def http_get(self, ctx: pywss.Context):
         req = HttpGetRequest(**ctx.url_params)
         resp = Response()
         resp.data = {
-            "total": self.get_users_count(req),
+            "total": self.userService.get_users_count(req),
             "data": [
                 {
                     "id": user.id,
@@ -93,7 +96,7 @@ class View(UserService):
                     "created_at": user.created_at.strftime("%Y-%m-%d %H:%M:%S"),
                     "updated_at": user.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
                 }
-                for user in self.get_users(req)
+                for user in self.userService.get_users(req)
             ],
         }
         ctx.write(resp)
@@ -114,5 +117,5 @@ class View(UserService):
             password=sha256.hexdigest(),
             created_by=req.created_by or req.username,
         )
-        self.add_user(user)
+        self.userService.add_user(user)
         ctx.write(Response())

@@ -34,7 +34,10 @@ class LoginService:
             return user
 
 
-class View(LoginService):
+class View:
+
+    def __init__(self, loginService: LoginService):
+        self.loginService = loginService
 
     @pywss.openapi.docs(summary="登录", request={
         "loginType": "default",
@@ -45,7 +48,7 @@ class View(LoginService):
         req = HttpPostRequest(**ctx.json())
         if req.loginType != "default":
             raise StrException(f"暂不支持[{req.loginType}]登录方式")
-        user = self.check_user(req)
+        user = self.loginService.check_user(req)
         jwt: pywss.JWT = ctx.data.jwt
         resp = Response()
         resp.data = {
