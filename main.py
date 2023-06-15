@@ -22,8 +22,7 @@ def main():
     app.openapi()
     app.get("/", lambda ctx: ctx.redirect("/docs"))
     app.options("*", lambda ctx: ctx.set_status_code(pywss.StatusNoContent))
-    partyApp = app.party("", recoverHandler)
-    partyApp.view_modules("view")
+    app.view_modules("view", recoverHandler)
     app.run(log_json=True)
 
 
