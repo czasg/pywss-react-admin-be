@@ -24,10 +24,6 @@ def main():
     app.options("*", lambda ctx: ctx.set_status_code(pywss.StatusNoContent))
     partyApp = app.party("", recoverHandler)
     partyApp.view_modules("view")
-    partyApp.mount_apps(
-        "app.admin",
-        "app.memo",
-    )
     app.run(log_json=True)
 
 
